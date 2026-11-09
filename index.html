@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#12151a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="英语精读">
+<link rel="manifest" href="manifest.json">
+<title>英语精读</title>
+<style>
+  :root{
+    --bg:#12151a; --panel:#1a1f27; --panel2:#222833; --line:#2c3441;
+    --text:#e6e9ee; --dim:#8b95a5; --accent:#d9a441; --accent-dim:#8a6a2a;
+    --ok:#4caf7d; --warn:#d97757;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;height:100%}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    font-size:16px; line-height:1.7;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  header{
+    position:sticky; top:0; z-index:20;
+    background:rgba(18,21,26,.94); backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+    padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
+    display:flex; align-items:center; gap:10px;
+  }
+  header h1{font-size:17px; margin:0; font-weight:600; letter-spacing:.5px; flex:1}
+  header .badge{font-size:11px; color:var(--dim); border:1px solid var(--line); padding:2px 8px; border-radius:20px}
+  main{max-width:820px; margin:0 auto; padding:16px}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:14px; margin-bottom:14px}
+  .card h2{font-size:13px; color:var(--dim); font-weight:500; margin:0 0 10px; letter-spacing:.5px}
+  textarea{
+    width:100%; min-height:130px; resize:vertical; background:var(--panel2);
+    color:var(--text); border:1px solid var(--line); border-radius:10px;
+    padding:12px; font-size:15px; line-height:1.65; font-family:inherit;
+  }
+  textarea:focus{outline:none; border-color:var(--accent-dim)}
+  .row{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px}
+  button{
+    background:var(--panel2); color:var(--text); border:1px solid var(--line);
+    border-radius:10px; padding:10px 16px; font-size:14px; font-family:inherit;
+    cursor:pointer; transition:.15s; min-height:42px;
+  }
+  button:active{transform:scale(.97)}
+  button.primary{background:var(--accent); color:#1a1206; border-color:var(--accent); font-weight:600}
+  button.ghost{background:transparent}
+  button:disabled{opacity:.45; cursor:default}
+  .status{font-size:12px; color:var(--dim); margin-top:8px; min-height:18px}
+  .status.err{color:var(--warn)}
+  .status.ok{color:var(--ok)}
+
+  .toolbar{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px}
+  .toolbar label{font-size:13px; color:var(--dim); display:flex; align-items:center; gap:6px}
+  .toolbar input[type=range]{width:110px; accent-color:var(--accent)}
+  .toolbar select{background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:6px 8px; font-size:13px; font-family:inherit}
+
+  #reader{display:none}
+  .para{margin:0 0 20px; padding-bottom:16px; border-bottom:1px dashed var(--line)}
+  .para:last-child{border-bottom:none}
+  .en{font-size:17px; line-height:1.85; letter-spacing:.2px}
+  .zh{font-size:14px; color:var(--dim); margin-top:8px; line-height:1.7; display:none}
+  .zh.show{display:block}
+  .para.playing{background:linear-gradient(90deg,rgba(217,164,65,.10),transparent); border-radius:8px; padding-left:10px; margin-left:-10px}
+  .para .pbtn{
+    float:right; background:transparent; border:1px solid var(--line); color:var(--dim);
+    border-radius:8px; padding:2px 10px; font-size:12px; min-height:26px; margin-left:8px;
+  }
+  .w{cursor:pointer; border-radius:4px; padding:0 1px; transition:background .12s}
+  .w:hover,.w.active{background:rgba(217,164,65,.22); color:#fff}
+  .w.known{border-bottom:1px solid rgba(76,175,125,.5)}
+
+  #dict{
+    position:fixed; left:0; right:0; bottom:0; z-index:40;
+    background:var(--panel); border-top:1px solid var(--line);
+    border-radius:18px 18px 0 0; padding:16px 18px calc(18px + env(safe-area-inset-bottom));
+    transform:translateY(110%); transition:transform .22s ease;
+    box-shadow:0 -8px 30px rgba(0,0,0,.5); max-width:820px; margin:0 auto;
+  }
+  #dict.open{transform:translateY(0)}
+  #dict .dw{font-size:22px; font-weight:600; color:var(--accent); letter-spacing:.3px}
+  #dict .ph{font-size:13px; color:var(--dim); margin-top:2px}
+  #dict .def{font-size:15px; margin-top:10px; line-height:1.7; white-space:pre-wrap}
+  #dict .acts{display:flex; gap:8px; margin-top:14px; flex-wrap:wrap}
+  #dict .close{position:absolute; top:12px; right:16px; background:transparent; border:none; color:var(--dim); font-size:20px; padding:4px 8px; min-height:0}
+  .loading{color:var(--dim); font-size:14px}
+
+  .hidden{display:none !important}
+  footer{text-align:center; color:#4a5261; font-size:11px; padding:20px 0 30px}
+</style>
+</head>
+<body>
+<header>
+  <h1>英语精读</h1>
+  <span class="badge" id="modeBadge">全文翻译 · 逐词点读</span>
+</header>
+
+<main>
+  <section class="card" id="inputCard">
+    <h2>粘贴英文文章 / 段落</h2>
+    <textarea id="src" placeholder="把英文文章粘贴到这里，支持整篇长文。&#10;&#10;例如：&#10;The universe is vast and full of mystery. To unify our understanding of it, scientists study the evolution of stars."></textarea>
+    <div class="row">
+      <button class="primary" id="btnParse">开始精读</button>
+      <button class="ghost" id="btnDemo">载入示例</button>
+      <button class="ghost" id="btnClear">清空</button>
+    </div>
+    <div class="status" id="parseStatus"></div>
+  </section>
+
+  <section id="reader">
+    <div class="toolbar">
+      <button id="btnPlayAll">全文朗读</button>
+      <button id="btnStop" disabled>停止</button>
+      <label>语速 <input type="range" id="rate" min="0.5" max="1.3" step="0.05" value="0.85"><span id="rateVal">0.85</span></label>
+      <label><input type="checkbox" id="showZh"> 显示译文</label>
+      <button class="ghost" id="btnBack">换文章</button>
+    </div>
+    <div class="status" id="readStatus"></div>
+    <div id="paras"></div>
+  </section>
+</main>
+
+<div id="dict">
+  <button class="close" id="dictClose">×</button>
+  <div class="dw" id="dw">word</div>
+  <div class="ph" id="dph"></div>
+  <div class="def" id="ddef"></div>
+  <div class="acts">
+    <button id="btnSayWord">朗读单词</button>
+    <button id="btnSaySent">朗读整句</button>
+    <button class="ghost" id="btnMarkKnown">标记已掌握</button>
+  </div>
+</div>
+
+<footer>英语精读 · 全文翻译 / 慢速朗读 / 逐词点读</footer>
+
+<script>
+(function(){
+  'use strict';
+
+  var DEMO = "The universe is vast, and human curiosity is universal. To unify our understanding of it, scientists study the evolution of stars and the formation of galaxies.\n\nEvery discovery involves controversy at first. People contrast new ideas with old beliefs, and many refuse to conform. Yet over time, evidence reforms what we accept as true.\n\nWe sail across the coastal waters, from island to inland, and walk along the beach at sunset. The shore reminds us how small we are, and how much remains to be explored.";
+
+  var $ = function(id){ return document.getElementById(id); };
+  var src = $('src'), paras = $('paras'), reader = $('reader'), inputCard = $('inputCard');
+  var synth = window.speechSynthesis || null;
+  var voices = [], curPara = -1, playing = false, stopFlag = false;
+  var known = loadKnown();
+
+  function loadKnown(){
+    try { return JSON.parse(localStorage.getItem('en_known') || '[]'); } catch(e){ return []; }
+  }
+  function saveKnown(){
+    try { localStorage.setItem('en_known', JSON.stringify(known)); } catch(e){}
+  }
+
+  function pickVoice(){
+    if(!synth) return null;
+    if(!voices.length) voices = synth.getVoices() || [];
+    var pref = ['Google US English','Microsoft Aria','Microsoft Zira','Samantha','Daniel','Alex','Karen'];
+    for(var i=0;i<pref.length;i++){
+      for(var j=0;j<voices.length;j++){
+        if(voices[j].name.indexOf(pref[i]) > -1) return voices[j];
+      }
+    }
+    for(var k=0;k<voices.length;k++){
+      if((voices[k].lang||'').toLowerCase().indexOf('en') === 0) return voices[k];
+    }
+    return voices[0] || null;
+  }
+  if(synth){
+    voices = synth.getVoices() || [];
+    if(synth.onvoiceschanged !== undefined) synth.onvoiceschanged = function(){ voices = synth.getVoices() || []; };
+  }
+
+  function setStatus(el, msg, cls){
+    el.textContent = msg || '';
+    el.className = 'status' + (cls ? ' ' + cls : '');
+  }
+
+  function splitSentences(text){
+    // 按句末标点切句，保留标点
+    var out = [], buf = '';
+    for(var i=0;i<text.length;i++){
+      var ch = text[i];
+      buf += ch;
+      if(/[.!?]/.test(ch)){
+        var next = text[i+1];
+        if(next === undefined || /\s|["')\]]/.test(next)){
+          if(buf.trim()) out.push(buf.trim());
+          buf = '';
+        }
+      }
+    }
+    if(buf.trim()) out.push(buf.trim());
+    return out.length ? out : [text];
+  }
+
+  function tokenize(sentence){
+    var frag = document.createDocumentFragment();
+    var re = /([A-Za-z][A-Za-z'’\-]*)/g, last = 0, m;
+    while((m = re.exec(sentence)) !== null){
+      if(m.index > last) frag.appendChild(document.createTextNode(sentence.slice(last, m.index)));
+      var w = m[1], span = document.createElement('span');
+      span.className = 'w' + (known.indexOf(w.toLowerCase()) > -1 ? ' known' : '');
+      span.textContent = w;
+      span.dataset.w = w;
+      span.dataset.sent = sentence;
+      frag.appendChild(span);
+      last = m.index + w.length;
+    }
+    if(last < sentence.length) frag.appendChild(document.createTextNode(sentence.slice(last)));
+    return frag;
+  }
+
+  function render(paragraphs){
+    paras.innerHTML = '';
+    paragraphs.forEach(function(pText, pi){
+      var sentences = splitSentences(pText);
+      var block = document.createElement('div');
+      block.className = 'para';
+      block.dataset.pi = pi;
+      block.dataset.full = pText;
+
+      var btn = document.createElement('button');
+      btn.className = 'pbtn';
+      btn.textContent = '读这段';
+      btn.addEventListener('click', function(e){ e.stopPropagation(); speakParagraph(pi); });
+      block.appendChild(btn);
+
+      var en = document.createElement('div');
+      en.className = 'en';
+      sentences.forEach(function(s){ en.appendChild(tokenize(s)); en.appendChild(document.createTextNode(' ')); });
+      block.appendChild(en);
+
+      var zh = document.createElement('div');
+      zh.className = 'zh';
+      zh.dataset.pi = pi;
+      zh.textContent = '译文加载中…';
+      block.appendChild(zh);
+
+      paras.appendChild(block);
+    });
+    inputCard.classList.add('hidden');
+    reader.style.display = 'block';
+    translateAll(paragraphs);
+  }
+
+  function translateAll(paragraphs){
+    var zhNodes = document.querySelectorAll('.zh');
+    var pending = paragraphs.length;
+    if(!pending){ setStatus($('readStatus'), ''); return; }
+    setStatus($('readStatus'), '正在翻译…', '');
+
+    paragraphs.forEach(function(text, i){
+      translate(text).then(function(zh){
+        if(zhNodes[i]) zhNodes[i].textContent = zh;
+        pending--;
+        if(pending === 0){
+          setStatus($('readStatus'), $('showZh').checked ? '翻译完成' : '翻译完成（勾选"显示译文"查看）', 'ok');
+        }
+      }).catch(function(){
+        if(zhNodes[i]) zhNodes[i].textContent = '（这一段翻译失败，可点单词逐个查）';
+        pending--;
+        if(pending === 0) setStatus($('readStatus'), '部分段落翻译失败，点单词仍可查释义', 'err');
+      });
+    });
+  }
+
+  function translate(text){
+    var q = text.length > 480 ? text.slice(0, 480) : text;
+    var url = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(q) + '&langpair=en|zh-CN';
+    return fetch(url, {cache:'no-store'}).then(function(r){ return r.json(); }).then(function(j){
+      var t = j && j.responseData && j.responseData.translatedText;
+      if(!t) throw new Error('empty');
+      if(/MYMEMORY WARNING|QUERY LENGTH LIMIT/i.test(t)) throw new Error('limit');
+      return t;
+    });
+  }
+
+  function speak(text, onEnd){
+    if(!synth){ setStatus($('readStatus'), '这个浏览器不支持朗读，建议用 Chrome 或 Edge', 'err'); return false; }
+    var u = new SpeechSynthesisUtterance(text);
+    var v = pickVoice(); if(v) u.voice = v;
+    u.lang = 'en-US';
+    u.rate = parseFloat($('rate').value) || 0.85;
+    u.pitch = 1;
+    if(onEnd) u.onend = onEnd;
+    synth.speak(u);
+    return true;
+  }
+
+  function clearPlaying(){
+    var els = paras.querySelectorAll('.para.playing');
+    for(var i=0;i<els.length;i++) els[i].classList.remove('playing');
+  }
+
+  function speakParagraph(pi){
+    var block = paras.querySelector('.para[data-pi="' + pi + '"]');
+    if(!block) return;
+    synth.cancel(); stopFlag = false;
+    clearPlaying(); block.classList.add('playing');
+    curPara = pi;
+    $('btnStop').disabled = false;
+    speak(block.dataset.full, function(){
+      if(!stopFlag){ block.classList.remove('playing'); }
+    });
+  }
+
+  function playAll(){
+    if(!synth){ setStatus($('readStatus'), '这个浏览器不支持朗读，建议用 Chrome 或 Edge', 'err'); return; }
+    var blocks = paras.querySelectorAll('.para');
+    if(!blocks.length) return;
+    synth.cancel(); stopFlag = false; playing = true;
+    $('btnStop').disabled = false;
+    $('btnPlayAll').textContent = '播放中…';
+
+    var i = 0;
+    function next(){
+      if(stopFlag || i >= blocks.length){
+        playing = false; clearPlaying();
+        $('btnPlayAll').textContent = '全文朗读';
+        $('btnStop').disabled = true;
+        if(!stopFlag) setStatus($('readStatus'), '朗读完毕', 'ok');
+        return;
+      }
+      clearPlaying();
+      var b = blocks[i];
+      b.classList.add('playing');
+      b.scrollIntoView({behavior:'smooth', block:'center'});
+      setStatus($('readStatus'), '正在朗读第 ' + (i+1) + ' / ' + blocks.length + ' 段', '');
+      var u = new SpeechSynthesisUtterance(b.dataset.full);
+      var v = pickVoice(); if(v) u.voice = v;
+      u.lang = 'en-US';
+      u.rate = parseFloat($('rate').value) || 0.85;
+      u.onend = function(){ i++; setTimeout(next, 120); };
+      u.onerror = function(){ i++; setTimeout(next, 120); };
+      synth.speak(u);
+    }
+    next();
+  }
+
+  function stopAll(){
+    stopFlag = true; playing = false;
+    if(synth) synth.cancel();
+    clearPlaying();
+    $('btnPlayAll').textContent = '全文朗读';
+    $('btnStop').disabled = true;
+    setStatus($('readStatus'), '已停止', '');
+  }
+
+  // ---- 词典面板 ----
+  var dict = $('dict'), curWord = '', curSent = '';
+  function openDict(word, sent){
+    curWord = word; curSent = sent || '';
+    $('dw').textContent = word;
+    $('dph').textContent = '';
+    $('ddef').innerHTML = '<span class="loading">查询中…</span>';
+    dict.classList.add('open');
+
+    var w = word.toLowerCase();
+    var url = 'https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(w);
+    fetch(url, {cache:'force-cache'}).then(function(r){
+      if(!r.ok) throw new Error('404');
+      return r.json();
+    }).then(function(arr){
+      var e = arr[0] || {};
+      var ph = e.phonetic || (e.phonetics && e.phonetics[0] && e.phonetics[0].text) || '';
+      $('dph').textContent = ph;
+      var lines = [];
+      (e.meanings || []).slice(0,3).forEach(function(m){
+        var defs = (m.definitions || []).slice(0,2).map(function(d){ return '· ' + d.definition; }).join('\n');
+        lines.push('【' + (m.partOfSpeech || '') + '】\n' + defs);
+      });
+      $('ddef').textContent = lines.join('\n\n') || '（没有查到释义）';
+    }).catch(function(){
+      $('ddef').textContent = '这个词的英文释义没查到。可以点「朗读单词」听发音，或复制到翻译软件里查中文。';
+    });
+  }
+  function closeDict(){ dict.classList.remove('open'); }
+
+  // ---- 事件 ----
+  paras.addEventListener('click', function(e){
+    var t = e.target;
+    if(t.classList && t.classList.contains('w')){
+      openDict(t.dataset.w, t.dataset.sent);
+    }
+  });
+
+  $('btnParse').addEventListener('click', function(){
+    var text = src.value.trim();
+    if(!text){ setStatus($('parseStatus'), '先粘贴一段英文', 'err'); return; }
+    var list = text.split(/\n\s*\n/).map(function(s){ return s.replace(/\s+/g,' ').trim(); }).filter(Boolean);
+    if(!list.length) list = [text.replace(/\s+/g,' ')];
+    setStatus($('parseStatus'), '已解析 ' + list.length + ' 段', 'ok');
+    render(list);
+  });
+
+  $('btnDemo').addEventListener('click', function(){
+    src.value = DEMO;
+    setStatus($('parseStatus'), '示例已载入，点「开始精读」', '');
+  });
+
+  $('btnClear').addEventListener('click', function(){
+    src.value = '';
+    setStatus($('parseStatus'), '');
+  });
+
+  $('btnBack').addEventListener('click', function(){
+    stopAll();
+    reader.style.display = 'none';
+    inputCard.classList.remove('hidden');
+  });
+
+  $('btnPlayAll').addEventListener('click', function(){
+    if(playing){ stopAll(); } else { playAll(); }
+  });
+  $('btnStop').addEventListener('click', stopAll);
+
+  $('rate').addEventListener('input', function(){
+    $('rateVal').textContent = this.value;
+  });
+
+  $('showZh').addEventListener('change', function(){
+    var nodes = document.querySelectorAll('.zh');
+    for(var i=0;i<nodes.length;i++){
+      nodes[i].classList.toggle('show', this.checked);
+    }
+  });
+
+  $('dictClose').addEventListener('click', closeDict);
+  $('btnSayWord').addEventListener('click', function(){
+    if(synth){ synth.cancel(); speak(curWord); }
+  });
+  $('btnSaySent').addEventListener('click', function(){
+    if(synth && curSent){ synth.cancel(); speak(curSent); }
+  });
+  $('btnMarkKnown').addEventListener('click', function(){
+    var w = curWord.toLowerCase();
+    var i = known.indexOf(w);
+    if(i > -1){ known.splice(i,1); } else { known.push(w); }
+    saveKnown();
+    var spans = paras.querySelectorAll('.w');
+    for(var k=0;k<spans.length;k++){
+      if(spans[k].dataset.w.toLowerCase() === w){
+        spans[k].classList.toggle('known', known.indexOf(w) > -1);
+      }
+    }
+    $('btnMarkKnown').textContent = known.indexOf(w) > -1 ? '已掌握 ✓' : '标记已掌握';
+  });
+
+  document.addEventListener('click', function(e){
+    if(dict.classList.contains('open') && !dict.contains(e.target) && !(e.target.classList && e.target.classList.contains('w'))){
+      closeDict();
+    }
+  });
+
+  // 首次进入给个提示
+  setStatus($('parseStatus'), '点「载入示例」可以直接试一遍', '');
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+    });
+  }
+})();
+</script>
+</body>
+</html>
