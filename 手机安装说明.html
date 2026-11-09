@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>怎么装到手机上</title>
+<style>
+  body{background:#12151a;color:#e6e9ee;font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+       margin:0;padding:20px;line-height:1.75;max-width:720px;margin:0 auto}
+  h1{font-size:20px;color:#d9a441;margin:0 0 6px}
+  .sub{color:#8b95a5;font-size:13px;margin-bottom:22px}
+  h2{font-size:15px;color:#d9a441;margin:26px 0 8px;padding-bottom:6px;border-bottom:1px solid #2c3441}
+  .box{background:#1a1f27;border:1px solid #2c3441;border-radius:12px;padding:14px 16px;margin-bottom:14px;font-size:14px}
+  code{background:#222833;padding:2px 7px;border-radius:5px;color:#d9a441;font-size:13px}
+  ol,ul{margin:8px 0;padding-left:22px}
+  li{margin-bottom:7px}
+  .tip{color:#8b95a5;font-size:13px}
+  .warn{border-left:3px solid #d97757;padding-left:12px;color:#c9d0da;font-size:13px}
+</style>
+</head>
+<body>
+<h1>怎么装到手机上</h1>
+<div class="sub">英语精读 · 网页版已经跑通，下面把它变成手机桌面上的 App</div>
+
+<h2>第一步：手机和电脑连同一个 WiFi</h2>
+<div class="box">
+  电脑上这个地址已经在跑：<code>http://127.0.0.1:8848/index.html</code>
+  <div class="tip" style="margin-top:8px">但 <code>127.0.0.1</code> 只能电脑自己访问。手机要用电脑的局域网 IP。</div>
+</div>
+
+<h2>第二步：在手机上打开</h2>
+<div class="box">
+  <ol>
+    <li>手机连上和电脑同一个 WiFi</li>
+    <li>手机浏览器输入电脑的局域网地址（形如 <code>http://192.168.x.x:8848/index.html</code>）</li>
+    <li>页面能打开，说明通了</li>
+  </ol>
+</div>
+
+<h2>第三步：添加到主屏（变成 App）</h2>
+<div class="box">
+  <b>安卓（Chrome / Edge）</b>
+  <ol>
+    <li>右上角菜单 → 「添加到主屏幕」或「安装应用」</li>
+    <li>确认后桌面出现「英语精读」图标，点开是全屏的，没有浏览器地址栏</li>
+  </ol>
+  <b style="display:block;margin-top:14px">iPhone（Safari）</b>
+  <ol>
+    <li>底部「分享」按钮 → 「添加到主屏幕」</li>
+    <li>桌面出现图标，点开全屏运行</li>
+  </ol>
+</div>
+
+<h2>装成 App 之后能干什么</h2>
+<div class="box">
+  <ul>
+    <li>粘贴任意英文文章，一键出中文对照译文</li>
+    <li>全文慢速朗读，可调语速，逐段跟读</li>
+    <li>点文章里任意单词，弹出英文释义 + 发音</li>
+    <li>标记已掌握的单词，下次自动高亮</li>
+    <li>页面本身离线可用（翻译和查词要联网）</li>
+  </ul>
+</div>
+
+<h2>想彻底独立、不依赖电脑</h2>
+<div class="box">
+  <div class="warn">现在这个版本是「手机连电脑」用的，电脑关了手机就打不开。</div>
+  <div style="margin-top:10px">要变成真正独立的 App，两条路：</div>
+  <ol>
+    <li><b>挂到网上</b>：把这几个文件传到任意静态托管（GitHub Pages、Vercel、Netlify 都免费），手机随时打开，不依赖电脑。这条路最快，半小时内能好。</li>
+    <li><b>打成安装包</b>：用 PWA 打包工具生成 <code>.apk</code>，装到安卓手机上，彻底离线独立。</li>
+  </ol>
+</div>
+</body>
+</html>
