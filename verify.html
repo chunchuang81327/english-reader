@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>英语精读 · 功能验收</title>
+<style>
+  body{background:#12151a;color:#e6e9ee;font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;margin:0;padding:20px;line-height:1.7}
+  h1{font-size:18px;color:#d9a441;margin:0 0 4px}
+  .sub{color:#8b95a5;font-size:12px;margin-bottom:18px}
+  .step{background:#1a1f27;border:1px solid #2c3441;border-radius:10px;padding:12px 14px;margin-bottom:10px;font-size:14px}
+  .pass{color:#4caf7d}.fail{color:#d97757}
+  .k{color:#8b95a5;font-size:12px}
+  #out{white-space:pre-wrap;font-size:13px;background:#0e1116;border:1px solid #2c3441;border-radius:10px;padding:12px;margin-top:14px;max-height:340px;overflow:auto}
+  iframe{width:100%;height:420px;border:1px solid #2c3441;border-radius:10px;margin-top:16px;background:#fff}
+</style>
+</head>
+<body>
+<h1>英语精读 · 功能验收报告</h1>
+<div class="sub">真实渲染 + 真实点击，模拟用户完整走一遍</div>
+<div id="report"><div class="step k">正在加载页面…</div></div>
+<div id="out"></div>
+<iframe id="frame" src="index.html"></iframe>
+<script>
+var R = document.getElementById('report'), OUT = document.getElementById('out');
+var log = function(s){ OUT.textContent += s + '\n'; };
+var results = [];
+function step(name, ok, detail){
+  results.push({name:name, ok:ok, detail:detail});
+  var d = document.createElement('div');
+  d.className = 'step';
+  d.innerHTML = (ok ? '<span class="pass">✔ 通过</span>' : '<span class="fail">✘ 未通过</span>') +
+    ' &nbsp;' + name + (detail ? '<div class="k">' + detail + '</div>' : '');
+  R.appendChild(d);
+}
+function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+window.addEventListener('load', async function(){
+  R.innerHTML = '';
+  var f = document.getElementById('frame');
+  var w = f.contentWindow, d = f.contentDocument;
+
+  step('页面加载', !!d.getElementById('src'), '找到输入框 #src');
+  step('PWA 清单', !!d.querySelector('link[rel=manifest]'), 'manifest.json 已引用');
+  step('朗读引擎', !!w.speechSynthesis, 'speechSynthesis ' + (w.speechSynthesis ? '可用' : '不可用'));
+
+  // 1. 载入示例
+  d.getElementById('btnDemo').click();
+  await sleep(200);
+  var demoText = d.getElementById('src').value;
+  step('载入示例文本', demoText.length > 100, '示例长度 ' + demoText.length + ' 字符');
+
+  // 2. 开始精读
+  d.getElementById('btnParse').click();
+  await sleep(400);
+  var paras = d.querySelectorAll('.para');
+  step('解析分段', paras.length >= 2, '生成 ' + paras.length + ' 个段落块');
+
+  var words = d.querySelectorAll('.w');
+  step('逐词可点标记', words.length > 50, '标记出 ' + words.length + ' 个可点单词');
+
+  // 3. 等翻译回来
+  var zhNodes = d.querySelectorAll('.zh');
+  var got = 0, tried = 0;
+  for(var i=0;i<40;i++){
+    await sleep(500); tried++;
+    got = 0;
+    for(var j=0;j<zhNodes.length;j++){
+      var t = zhNodes[j].textContent || '';
+      if(t && t.indexOf('加载中') === -1) got++;
+    }
+    if(got === zhNodes.length) break;
+  }
+  var firstZh = zhNodes[0] ? zhNodes[0].textContent : '';
+  var hasChinese = /[\u4e00-\u9fa5]/.test(firstZh);
+  step('全文翻译', hasChinese, '第1段译文：' + firstZh.slice(0, 60) + '（等待 ' + (tried*0.5) + 's）');
+  log('译文样本：\n' + firstZh);
+
+  // 4. 点单词查词
+  var target = null;
+  for(var k=0;k<words.length;k++){
+    if(words[k].dataset.w && words[k].dataset.w.toLowerCase() === 'universe'){ target = words[k]; break; }
+  }
+  if(!target) target = words[0];
+  target.click();
+  await sleep(300);
+  var dict = d.getElementById('dict');
+  var open = dict.classList.contains('open');
+  step('点击单词弹出词典', open, '弹出的是「' + d.getElementById('dw').textContent + '」');
+
+  var defText = '';
+  for(var m=0;m<24;m++){
+    await sleep(500);
+    defText = d.getElementById('ddef').textContent || '';
+    if(defText && defText.indexOf('查询中') === -1) break;
+  }
+  step('单词释义返回', defText.length > 10 && defText.indexOf('查询中') === -1,
+       '释义：' + defText.slice(0, 80).replace(/\n/g,' '));
+  log('释义样本：\n' + defText.slice(0, 200));
+
+  // 5. 显示译文开关
+  var cb = d.getElementById('showZh');
+  cb.checked = true;
+  cb.dispatchEvent(new w.Event('change'));
+  await sleep(150);
+  var shown = d.querySelector('.zh.show');
+  step('显示译文开关', !!shown, shown ? '译文已展开' : '未展开');
+
+  // 6. 标记已掌握
+  d.getElementById('btnMarkKnown').click();
+  await sleep(200);
+  var knownSpans = d.querySelectorAll('.w.known');
+  step('标记已掌握', knownSpans.length > 0, '已标记 ' + knownSpans.length + ' 处');
+
+  // 汇总
+  var pass = results.filter(function(r){ return r.ok; }).length;
+  var total = results.length;
+  var sum = document.createElement('div');
+  sum.className = 'step';
+  sum.style.borderColor = pass === total ? '#4caf7d' : '#d97757';
+  sum.innerHTML = '<b>总计：' + pass + ' / ' + total + ' 项通过</b>';
+  R.insertBefore(sum, R.firstChild);
+  document.title = '验收 ' + pass + '/' + total + ' - 英语精读';
+  log('\n=== 汇总 ' + pass + '/' + total + ' ===');
+});
+</script>
+</body>
+</html>
